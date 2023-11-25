@@ -1,3 +1,5 @@
+import numpy as np
+import math
 
 class Team:
     agent_type = 'image'
@@ -61,5 +63,43 @@ class Team:
                  rescue:       bool (optional. no clue where you will end up though.)
                  steer:        float -1..1 steering angle
         """
+        
+        puck_location = np.asarray([1,2,3])
+        res = []
+        steer_gain = 2
+        target_vel = 25
+
+        for p_state in player_state:
+            player = dict()
+
+            goal = np.asarray([1,2,3])
+
+            curr_location = p_state['kart']['location']
+            front = p_state['kart']['front']
+            velocity = p_state['kart']['velocity']
+
+            front_norm = front / np.linalg.norm(front)
+            dist_to_target = goal - curr_location
+            to_target_u = dist_to_target / np.linalg.norm(dist_to_target)
+            angle_to_target = (np.arccos(np.clip(np.dot(front_norm, to_target_u), -1.0, 1.0)) / math.pi) * np.sign(np.cross(front_norm, to_target_u)[1])
+          
+            facing_goal = False
+            if front[1] > goal:
+                facing_goal = True
+
+            curr_vel_mag = np.linalg.norm([velocity[0],velocity[2]])
+            # arbitrary value. if velocity is super small then assume we are stuck on wall and reverse+turn
+            if curr_vel_mag < 2:
+                player['acceleration'] = 0.0
+                player['brake'] = 1.0
+                player['steer'] = -0.5
+            else:
+                player['acceleration'] = 1.0 if curr_vel_mag < target_vel else 0.0
+                player['steer'] = steer_gain * angle_to_target
+
+            
+            res.append[player]
+          
+        return res
         # TODO: Change me. I'm just cruising straight
-        return [dict(acceleration=1, steer=0)] * self.num_players
+        # return [dict(acceleration=1, steer=0)] * self.num_players
