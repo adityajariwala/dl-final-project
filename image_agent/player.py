@@ -91,6 +91,7 @@ class Team:
 
           goal_direction = ((torch.tensor(self.goal) - front) / torch.norm(torch.tensor(self.goal) - front)).numpy()
           kart_direction = ((front - curr_location) / torch.norm(front - curr_location)).numpy()
+          own_goal_direction = ((torch.tensor(self.own_goal) - front) / torch.norm(torch.tensor(self.own_goal) - front)).numpy()
           theta_kart_to_goal = np.arctan2(self.goal[1] - curr_location[1], self.goal[0] - curr_location[0])
 
 
@@ -132,7 +133,10 @@ class Team:
                       player['steer'] = steering_angle
                       # need to steer away if the we are going towards our own goal
                   elif np.sign(front[1]) == np.sign(self.own_goal[1]) and np.sign(front[1]) == np.sign(kart_direction[1]) and np.abs(front[1]) > 15:
-                      
+                      goal_displacement = np.sign(kart_direction[1])*(kart_direction[0] - own_goal_direction[0])
+                      # TODO figure this part out
+                      # steer = goal_displacement / np.abs(distance_to_puck)
+                      # player['steer'] 
           res.append[player]
           
         return res
