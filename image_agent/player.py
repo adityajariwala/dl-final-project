@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import torch
 
 class Team:
     agent_type = 'image'
@@ -26,6 +27,8 @@ class Team:
            TODO: feel free to edit or delete any of the code below
         """
         self.team, self.num_players = team, num_players
+        self.goal = [0, 75] if team % 2 == 0 else [0, -75]
+        self.own_goal = [0, 75] if team % 2 == 1 else [0, -75]
         return ['tux'] * num_players
 
     def act(self, player_state, player_image):
@@ -64,41 +67,73 @@ class Team:
                  steer:        float -1..1 steering angle
         """
         
-        puck_location = np.asarray([1,2,3])
+        model_output = [True, (1, 2), 1.0]
+
+        distance_to_puck = model_output[2]
+        puck_location = model_output[1]
+        puck_onscreen = model_output[0]
         res = []
-        steer_gain = 2
-        target_vel = 25
 
         for p_state in player_state:
-            player = dict()
+          player = dict()
+          front = p_state['kart']['front'][[0,2]]
+          curr_location = p_state['kart']['location'][[0,2]]
+          kart_direction = ((front-curr_location) / torch.norm(front-curr_location)).numpy()
 
-            goal = np.asarray([1,2,3])
+          kart_x_stuck_on_edge = np.abs(front[0]) > 18
+          kart_y_stuck_on_edge = np.abs(front[1]) > 54
 
-            curr_location = p_state['kart']['location']
-            front = p_state['kart']['front']
-            velocity = p_state['kart']['velocity']
+          kart_x_perp = np.abs(kart_direction[0]) > 0.85
+          kart_stuck_x = kart_x_stuck_on_edge and kart_x_perp
 
-            front_norm = front / np.linalg.norm(front)
-            dist_to_target = goal - curr_location
-            to_target_u = dist_to_target / np.linalg.norm(dist_to_target)
-            angle_to_target = (np.arccos(np.clip(np.dot(front_norm, to_target_u), -1.0, 1.0)) / math.pi) * np.sign(np.cross(front_norm, to_target_u)[1])
-          
-            facing_goal = False
-            if front[1] > goal:
-                facing_goal = True
+          kart_y_perp = np.abs(kart_direction[1]) > 0.85
+          kart_stuck_y = kart_y_stuck_on_edge and kart_y_perp
 
-            curr_vel_mag = np.linalg.norm([velocity[0],velocity[2]])
-            # arbitrary value. if velocity is super small then assume we are stuck on wall and reverse+turn
-            if curr_vel_mag < 2:
-                player['acceleration'] = 0.0
-                player['brake'] = 1.0
-                player['steer'] = -0.5
-            else:
-                player['acceleration'] = 1.0 if curr_vel_mag < target_vel else 0.0
-                player['steer'] = steer_gain * angle_to_target
+          goal_direction = ((torch.tensor(self.goal) - front) / torch.norm(torch.tensor(self.goal) - front)).numpy()
+          kart_direction = ((front - curr_location) / torch.norm(front - curr_location)).numpy()
+          theta_kart_to_goal = np.arctan2(self.goal[1] - curr_location[1], self.goal[0] - curr_location[0])
 
-            
-            res.append[player]
+
+          if not puck_onscreen or distance_to_puck > 5:
+              print('kart stuck somewhere')
+              if kart_stuck_x or kart_stuck_y:
+                  player['acceleration'] = 1
+                  player['brake'] = False
+                  player['steer'] = 0.5 * np.random.rand()
+
+          else:
+              print('puck onscreen')
+              # not sure how exactly distances will work, but assuming that it is possible that we are slightly ahead of puck but it is still visible 
+              # hence the negative distance value
+              if distance_to_puck < 0.25 and distance_to_puck > -0.15:
+                  if np.sign(goal_direction[1]) == np.sign(kart_direction[1]) and theta_kart_to_goal >15:
+                      shooting_direction = np.array(puck_location) - np.array(curr_location)
+                      shooting_direction_normalized = 0.2 * shooting_direction / np.linalg.norm(shooting_direction)
+                      theta_kart_to_puck = np.degrees(np.arctan2(shooting_direction_normalized[1], shooting_direction_normalized[0]))
+                      v_puck_to_goal = np.array([self.goal[0] - puck_location[0], self.goal[1] - puck_location[1]])
+                      theta_puck_to_own_goal = np.degrees(np.arctan2(self.own_goal[0], self.own_goal[1]))
+
+                      theta_puck_to_goal = np.degrees(np.arctan2(v_puck_to_goal[1], v_puck_to_goal[0]))
+                      required_angle_of_deviation_in_puck = theta_puck_to_goal - theta_kart_to_puck
+                      radius_puck = 0.1
+                      deflection_angle = 180./np.pi*np.arctan2(radius_puck*np.sin(np.radians(required_angle_of_deviation_in_puck)), distance_to_puck - radius_puck*np.cos(np.radians(required_angle_of_deviation_in_puck)))
+                      updated_shooting_direction_angle = theta_kart_to_puck - (deflection_angle)
+
+                      approach_vs_opp_goal = updated_shooting_direction_angle - theta_puck_to_goal
+                      approach_vs_own_goal = updated_shooting_direction_angle - theta_puck_to_own_goal
+
+                      steering_angle = theta_kart_to_goal - updated_shooting_direction_angle
+                      if steering_angle > 180:
+                          steering_angle = steering_angle - 360
+                      
+                      if steering_angle < -180:
+                          steering_angle = 360 + steering_angle
+
+                      player['steer'] = steering_angle
+                      # need to steer away if the we are going towards our own goal
+                  elif np.sign(front[1]) == np.sign(self.own_goal[1]) and np.sign(front[1]) == np.sign(kart_direction[1]) and np.abs(front[1]) > 15:
+                      
+          res.append[player]
           
         return res
         # TODO: Change me. I'm just cruising straight
