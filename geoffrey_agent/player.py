@@ -2,9 +2,11 @@ from os import path
 import numpy as np
 import torch 
 
+
 def limit_period(angle):
-    # turn angle into -1 to 1 
-    return angle - torch.floor(angle / 2 + 0.5) * 2 
+    # turn angle into -1 to 1
+    return angle - torch.floor(angle / 2 + 0.5) * 2
+
 
 def extract_features(pstate, soccer_state, opponent_state, team_id):
     # features of ego-vehicle
