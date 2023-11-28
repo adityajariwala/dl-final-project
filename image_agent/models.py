@@ -125,6 +125,28 @@ class FoveaNet(torch.nn.Module):
         return self.model(x)
 
 
+class FoveaNetDist(torch.nn.Module):
+    def __init__(self, in_channels=3, first_output_channels=16):
+        super().__init__()
+        self.model = torch.nn.Sequential(
+            ResBlock(in_channels, first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(first_output_channels, 2 * first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(2 * first_output_channels, 4 * first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(4 * first_output_channels, 8 * first_output_channels),
+            # torch.nn.MaxPool2d(2),
+            torch.nn.Conv2d(8 * first_output_channels, 16 * first_output_channels, kernel_size=3),
+            torch.nn.MaxPool2d(2),
+            torch.nn.Flatten(),
+            torch.nn.Linear(7 * 7 * 16 * first_output_channels, 1)
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+
 def save_model(model, name: str = 'det.pt'):
     from torch import save
     from os import path

@@ -6,7 +6,7 @@ import torch.utils.tensorboard as tb
 from torchvision import transforms
 
 from tournament.utils import load_recording
-from .models import save_model, Planner, BinaryClassifier, FoveaNet, load_model
+from .models import save_model, Planner, BinaryClassifier, FoveaNet, load_model, FoveaNetDist
 from .utils import load_detection_data
 
 
@@ -138,6 +138,41 @@ def train(args):
             print(f'Epoch: {epoch} - FNLoss: {np.mean(total_loss_coord)}')
             save_model(model_coord, "model_coord.pt")
 
+    elif args.models == "all" or args.models == "dist":
+        print("Data loaded, starting training dist Planner model...")
+        train_data_with_puck = load_detection_data(training_data_with_puck, num_workers=4, batch_size=args.batch,
+                                                   transform=augmentation)
+        if args.continue_training:
+            print("Continuing training model from last saved checkpoint...")
+            model_dist = load_model("model_dist.pt").to(device)
+        else:
+            model_dist = FoveaNetDist().to(device)
+        optimizer_dist = torch.optim.Adam(model_dist.parameters(), lr=args.learning_rate_dist)
+        loss_dist = torch.nn.SmoothL1Loss()
+
+        global_step = 0
+        for epoch in range(args.epochs):
+            model_dist.train()
+            total_loss_dist = 0.
+
+            for img, _, _, z in train_data_with_puck:
+                img = img.to(device)
+                z = z.to(dtype=torch.float32).to(device)
+
+                output_dist = model_dist(img)
+                loss_val_dist = loss_dist(output_dist.squeeze(-1), z).mean()
+                total_loss_dist += loss_val_dist.detach().cpu().numpy()
+
+                optimizer_dist.zero_grad()
+                loss_val_dist.backward()
+                optimizer_dist.step()
+
+                global_step += 1
+
+            model_dist.eval()
+            print(f'Epoch: {epoch} - FNDLoss: {np.mean(total_loss_dist)}')
+            save_model(model_dist, "model_dist.pt")
+
 
 def log(logger, imgs, gt_det, det, global_step):
     """
@@ -162,6 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--train', type=str, default='data')
     parser.add_argument('-lrp', '--learning_rate_puck', type=float, default=1e-4)
     parser.add_argument('-lrc', '--learning_rate_coord', type=float, default=1e-4)
+    parser.add_argument('-lrd', '--learning_rate_dist', type=float, default=1e-4)
     parser.add_argument('-mo', '--momentum', type=float, default=0.9)
     parser.add_argument('-d', '--decay', type=float, default=0.01)
     parser.add_argument('-b', '--batch', type=int, default=50)
