@@ -13,24 +13,24 @@ def spatial_argmax(logit):
                         (weights.sum(2) * torch.linspace(-1, 1, logit.size(1)).to(logit.device)[None]).sum(1)), 1)
 
 
-class BinaryClassifier(torch.nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self.conv1 = torch.nn.Conv2d(3, 5, kernel_size=3)
-        self.conv2 = torch.nn.Conv2d(5, 7, kernel_size=3)
-        self.conv2_drop = torch.nn.Dropout2d()
-        self.fc1 = torch.nn.Linear(6300, 1024)
-        self.fc2 = torch.nn.Linear(1024, 2)
-
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(x.shape[0], -1)
-        # print(x.shape)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = self.fc2(x)
-        return x
+# class BinaryClassifier(torch.nn.Module):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__()
+#         self.conv1 = torch.nn.Conv2d(3, 5, kernel_size=3)
+#         self.conv2 = torch.nn.Conv2d(5, 7, kernel_size=3)
+#         self.conv2_drop = torch.nn.Dropout2d()
+#         self.fc1 = torch.nn.Linear(6300, 1024)
+#         self.fc2 = torch.nn.Linear(1024, 2)
+#
+#     def forward(self, x):
+#         x = F.relu(F.max_pool2d(self.conv1(x), 2))
+#         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+#         x = x.view(x.shape[0], -1)
+#         # print(x.shape)
+#         x = F.relu(self.fc1(x))
+#         x = F.dropout(x, training=self.training)
+#         x = self.fc2(x)
+#         return x
 
 
 class Planner(torch.nn.Module):
@@ -145,6 +145,28 @@ class FoveaNetDist(torch.nn.Module):
 
     def forward(self, x):
         return self.model(x)
+
+
+class BinaryClassifier(torch.nn.Module):
+    def __init__(self, in_channels=3, first_output_channels=16):
+        super().__init__()
+        self.model = torch.nn.Sequential(
+            ResBlock(in_channels, first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(first_output_channels, 2 * first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(2 * first_output_channels, 4 * first_output_channels),
+            torch.nn.MaxPool2d(2),
+            ResBlock(4 * first_output_channels, 8 * first_output_channels),
+            # torch.nn.MaxPool2d(2),
+            torch.nn.Conv2d(8 * first_output_channels, 16 * first_output_channels, kernel_size=3),
+            torch.nn.MaxPool2d(2),
+            torch.nn.Flatten(),
+            torch.nn.Linear(7 * 7 * 16 * first_output_channels, 2)
+        )
+
+    def forward(self, x):
+        return F.log_softmax(self.model(x), dim=1)
 
 
 def save_model(model, name: str = 'det.pt'):
