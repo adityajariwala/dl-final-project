@@ -115,14 +115,13 @@ class PuckDetector(torch.nn.Module):
 def save_model(model, name: str = 'det.pt'):
     from torch import save
     from os import path
-    save(model, path.join(path.dirname(path.abspath(__file__)), name))
-    return save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), name[:-3] + '.th'))
+    return save(model, path.join(path.dirname(path.abspath(__file__)), name))
 
 
 def load_model(name: str = 'model_puck.pt'):
     from torch import load
     from os import path
-    if name == 'model_puck.pt' or name == 'model_coord.pt' or name == 'model_dist.pt':
+    if name == 'model_puck.pt' or name == 'model_unified.pt':
         r = torch.load(path.join(path.dirname(path.abspath(__file__)), name))
     else:
         r = PuckDetector()
