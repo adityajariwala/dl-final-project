@@ -77,7 +77,7 @@ class Team:
 
         print(self.model_puck_classifier)
 
-        self.model_puck_unified = torch.load('/Users/adityajariwala/Documents/GitHub/dl-final-project/image_agent/unified.pt',
+        self.model_puck_unified = torch.load('/Users/adityajariwala/Documents/GitHub/dl-final-project/image_agent/model_unified_50.pt',
                                              map_location="cpu").to(device)
         self.model_puck_unified.eval()
 

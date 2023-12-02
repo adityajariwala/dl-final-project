@@ -117,10 +117,9 @@ def train(args):
                     val_loss = loss_puck(output_puck, puck).mean()
                     valid_loss += val_loss.detach().cpu().numpy()
 
-            print(f'Epoch {epoch + 1}, Average Validation Loss: {valid_loss}')
             if valid_logger:
                 valid_logger.add_scalar('loss', valid_loss, epoch)
-            print(f'Epoch {epoch + 1} - avg train loss: {total_loss_puck} - avg valid loss: {valid_loss}')
+            print(f'Epoch {epoch + 1} -\tavg train loss: {total_loss_puck}\t- avg valid loss: {valid_loss}')
             save_model(model_puck, f"model_puck_{epoch+1}.pt")
         print()
 
@@ -184,7 +183,7 @@ def train(args):
             valid_loss /= len(valid_loader)
             if valid_logger:
                 valid_logger.add_scalar('loss', valid_loss, epoch)
-            print(f'Epoch {epoch + 1} - avg train loss: {total_loss_unified} - avg valid loss: {valid_loss}')
+            print(f'Epoch {epoch + 1} - \tavg train loss: {total_loss_unified} \t- avg valid loss: {valid_loss}')
             save_model(model_unified, f"model_unified_{epoch+1}.pt")
 
     if train_logger:
