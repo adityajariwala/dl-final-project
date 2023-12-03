@@ -320,10 +320,10 @@ class Team:
                 else:
                     self.too_close[i] = True
                     if self.forward_frames[i] < 25:
-                        steering_angle = 0. if i == 0 else -0.7
+                        steering_angle = 0.6 if i == 1 else -0.6
                     elif self.forward_frames[i] < 50:
                         # steering_angle = 0
-                        steering_angle = -0.7 if i == 0 else 0.7
+                        steering_angle = -0.6 if i == 1 else 0.6
                     else:
                         steering_angle = 0
                     self.forward_frames[i] += 1
@@ -384,6 +384,8 @@ class Team:
                 # Case 1 : If Puck too close & a very high shooting angle -> slow down, first rotate
 
                 # if (distance_kart_to_puck <= DistanceThreshold) and (np.abs(steering_angle) > ShootingAngleThreshold):
+                if print_output:
+                    print("Steering Angle: ", steering_angle)
                 if distance_kart_to_puck <= DistanceThreshold:
 
                     acceleration = 0.14
