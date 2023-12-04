@@ -46,6 +46,7 @@ class AIRunner:
 
 class TeamRunner:
     agent_type = 'state'
+    # agent_type = 'image'
     _error = None
     _total_act_time = 0
 
@@ -171,6 +172,7 @@ class Match:
             initial_ball_location=[0, 0], initial_ball_velocity=[0, 0], verbose=False):
         RaceConfig = self._pystk.RaceConfig
 
+        # Create the teams
         logging.info('Creating teams')
 
         # Start a new match
@@ -293,6 +295,7 @@ if __name__ == '__main__':
     if args.parallel is None or remote.ray is None:
         # Create the teams
         team1 = AIRunner() if args.team1 == 'AI' else TeamRunner(args.team1)
+        # team1 = TeamRunner(args.team1)
         team2 = AIRunner() if args.team2 == 'AI' else TeamRunner(args.team2)
 
         # What should we record?
@@ -304,7 +307,12 @@ if __name__ == '__main__':
             recorder = recorder & utils.StateRecorder(args.record_state)
 
         # Start the match
-        match = Match(use_graphics=team1.agent_type == 'image' or team2.agent_type == 'image')
+        match = Match(use_graphics=True)
+        # match = Match(use_graphics=team1.agent_type == 'image' or team2.agent_type == 'image')
+
+        # result = match.run(team1, team2, args.num_players, args.num_frames, max_score=args.max_score,
+        #                    initial_ball_location=args.ball_location, initial_ball_velocity=args.ball_velocity,
+        #                    record_fn=recorder)
         try:
             result = match.run(team1, team2, args.num_players, args.num_frames, max_score=args.max_score,
                                initial_ball_location=args.ball_location, initial_ball_velocity=args.ball_velocity,

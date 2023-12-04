@@ -1,6 +1,14 @@
 Device: mps
 Data loaded, starting training unified model...
-Epoch 1 - 	avg train loss: 132.39376936287715 	- avg valid loss: 92.87791769845145
-Epoch 2 - 	avg train loss: 46.0021941744048 	- avg valid loss: 58.58101354326521
-Epoch 3 - 	avg train loss: 41.62465292831947 	- avg valid loss: 43.71214267185756
-Epoch 4 - 	avg train loss: 39.556631351339405 	- avg valid loss: 44.63268879481724
+Epoch 1 - 	avg train loss: 61.6707372336552 	- avg valid loss: 46.25252478463309
+Epoch 2 - 	avg train loss: 40.2413520484135 	- avg valid loss: 45.025556564331055
+Epoch 3 - 	avg train loss: 36.43264254208269 	- avg valid loss: 47.01081221444266
+Epoch 4 - 	avg train loss: 33.85178003640011 	- avg valid loss: 36.35536520821707
+Epoch 5 - 	avg train loss: 30.71226583678147 	- avg valid loss: 30.410487992422922
+Epoch 6 - 	avg train loss: 28.620018761733483 	- avg valid loss: 59.90963363647461
+Epoch 7 - 	avg train loss: 25.277343552688073 	- avg valid loss: 34.3085572378976
+Epoch 8 - 	avg train loss: 23.17894123340475 	- avg valid loss: 26.857762609209335
+Epoch 9 - 	avg train loss: 22.084922099935596 	- avg valid loss: 28.151454380580358
+Epoch 10 - 	avg train loss: 19.4498756671774 	- avg valid loss: 25.787665639604842
+Epoch 11 - 	avg train loss: 19.52200881366072 	- avg valid loss: 31.425904410226003
+Epoch 12 - 	avg train loss: 17.915257897870294 	- avg valid loss: 27.867604528154647
