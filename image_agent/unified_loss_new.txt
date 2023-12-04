@@ -1,0 +1,6 @@
+Device: mps
+Data loaded, starting training unified model...
+Epoch 1 - 	avg train loss: 132.39376936287715 	- avg valid loss: 92.87791769845145
+Epoch 2 - 	avg train loss: 46.0021941744048 	- avg valid loss: 58.58101354326521
+Epoch 3 - 	avg train loss: 41.62465292831947 	- avg valid loss: 43.71214267185756
+Epoch 4 - 	avg train loss: 39.556631351339405 	- avg valid loss: 44.63268879481724

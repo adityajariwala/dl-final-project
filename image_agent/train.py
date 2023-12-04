@@ -30,8 +30,11 @@ def train(args):
 
     print(f"Device: {device}")
 
-    pkl_files = ["ai_vs_ai_1200_updated_lowres_with_pucklocation_and_depth_info.pkl",
-                 "ai_vs_ai_1800_updated_lowres_with_pucklocation_and_depth_info.pkl"]
+    # pkl_files = ["ai_vs_ai_1200_updated_lowres_with_pucklocation_and_depth_info.pkl",
+    #              "ai_vs_ai_1800_updated_lowres_with_pucklocation_and_depth_info.pkl"]
+
+    pkl_files = ["big_data_5k.pkl"]
+
     training_data = []
     training_data_with_puck = []
 
@@ -60,13 +63,13 @@ def train(args):
                 training_data.append((team2_kart_0_image, team2_kart_0_puck_screen_location))
                 training_data.append((team2_kart_1_image, team2_kart_1_puck_screen_location))
 
-                if team1_kart_0_puck_screen_location[0]:
+                if team1_kart_0_puck_screen_location[0] and abs(team1_kart_0_puck_screen_location[2]) > 20:
                     training_data_with_puck.append((team1_kart_0_image, team1_kart_0_puck_screen_location))
-                if team1_kart_1_puck_screen_location[0]:
+                if team1_kart_1_puck_screen_location[0] and abs(team1_kart_1_puck_screen_location[2]) > 20:
                     training_data_with_puck.append((team1_kart_1_image, team1_kart_1_puck_screen_location))
-                if team2_kart_0_puck_screen_location[0]:
+                if team2_kart_0_puck_screen_location[0] and abs(team2_kart_0_puck_screen_location[2]) > 20:
                     training_data_with_puck.append((team2_kart_0_image, team2_kart_0_puck_screen_location))
-                if team2_kart_1_puck_screen_location[0]:
+                if team2_kart_1_puck_screen_location[0] and abs(team2_kart_1_puck_screen_location[2]) > 20:
                     training_data_with_puck.append((team2_kart_1_image, team2_kart_1_puck_screen_location))
 
     if args.models == "all" or args.models == "puck":
@@ -120,7 +123,7 @@ def train(args):
             if valid_logger:
                 valid_logger.add_scalar('loss', valid_loss, epoch)
             print(f'Epoch {epoch + 1} -\tavg train loss: {total_loss_puck}\t- avg valid loss: {valid_loss}')
-            save_model(model_puck, f"model_puck_{epoch+1}.pt")
+            save_model(model_puck, f"model_puck_new_{epoch+1}.pt")
         print()
 
     elif args.models == "all" or args.models == "unified":
@@ -184,7 +187,7 @@ def train(args):
             if valid_logger:
                 valid_logger.add_scalar('loss', valid_loss, epoch)
             print(f'Epoch {epoch + 1} - \tavg train loss: {total_loss_unified} \t- avg valid loss: {valid_loss}')
-            save_model(model_unified, f"model_unified_{epoch+1}.pt")
+            save_model(model_unified, f"model_unified_new_{epoch+1}.pt")
 
     if train_logger:
         train_logger.close()

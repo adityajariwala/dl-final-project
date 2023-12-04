@@ -15,25 +15,6 @@ elif torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-GOALS = np.float32([[0, 75], [0, -75]])
-
-LOST_STATUS_STEPS = 10
-LOST_COOLDOWN_STEPS = 10
-START_STEPS = 25
-LAST_PUCK_DURATION = 4
-MIN_SCORE = 0.2
-MAX_DET = 15
-MAX_DEV = 0.7
-MIN_ANGLE = 20
-MAX_ANGLE = 120
-TARGET_SPEED = 15
-STEER_YIELD = 15
-DRIFT_THRESH = 0.7
-TURN_CONE = 100
-
-TO_RAD = np.pi / 180
-
-
 def screen_to_world_coordinates(puck_screen_coordinates, proj, view, normalization_factor):
     WH2 = np.array([400, 300]) / 2
 
@@ -65,7 +46,7 @@ class Team:
         self.puck_in_frame_previous_frame = {}
         self.puck_3d_coordinates_previous_frame = {}
 
-        self.kart_loc_prev = {0: np.array([0,0,0]), 1: np.array([0,0,0])}
+        self.kart_loc_prev = {0: 0.0, 1: 0.0}
 
         self.total_frame = {0: 0, 1: 0}
 
@@ -166,14 +147,14 @@ class Team:
         DistanceThreshold = 3
         ShootingAngleThreshold = 0.5  # (in steering terms)
         FollowThroughFrames = 30
-        FramesDownTheLine = 2
+        FramesDownTheLine = 3
 
         all_goals = np.array([[0, 75], [0, -75]])
         own_goal = all_goals[self.team - 1]
         opponents_goal = all_goals[self.team]
         own_corners = np.array([[50, all_goals[self.team - 1][1]], [-50, all_goals[self.team - 1][1]]])
 
-        print_output = False
+        print_output = True
 
         # Loop through both Karts
         for i in [0, 1]:
@@ -191,8 +172,7 @@ class Team:
 
             max_steer_angle = self.kart_details[i]['kart']['max_steer_angle']
 
-            # loc_diff = abs(self.kart_loc_prev[i] - norm(self.kart_details[i]['kart']['front']))
-            loc_diff = norm(self.kart_loc_prev[i] - np.array(self.kart_details[i]['kart']['front']))
+            loc_diff = abs(self.kart_loc_prev[i] - norm(self.kart_details[i]['kart']['front']))
 
             if loc_diff > 3 and self.total_frame[i] > starting_frames:
                 if print_output:
@@ -200,7 +180,7 @@ class Team:
                     print(loc_diff)
                 self.total_frame = {0: 0, 1: 0}
 
-            self.kart_loc_prev[i] = np.array(self.kart_details[i]['kart']['front'])
+            self.kart_loc_prev[i] = norm(self.kart_details[i]['kart']['front'])
             velocity = norm(self.kart_details[i]['kart']['velocity'])
             rescue = velocity <= 0.01 or loc_diff <= 0.001
 
@@ -229,9 +209,11 @@ class Team:
                 puck_world_coordinates = screen_to_world_coordinates(puck_screen_coordinates, proj, view,
                                                                      normalization_factor)
                 # print("Derived 3D Coordinates", puck_world_coordinates)
+
             else:
                 puck_world_coordinates = np.array([0, 0, 0])
                 normalized_puck_screen_coordinates = np.array([0, 0])
+                normalization_factor = 0
 
             self.puck_screen_coordinates[i] = np.array([0, 0])
             self.puck_3d_coordinates[i] = puck_world_coordinates.copy()
@@ -283,7 +265,7 @@ class Team:
             kart_to_own_goal_direction = vector_kart_to_own_goal / np.linalg.norm(vector_kart_to_own_goal)
             distance_kart_to_own_goal = np.linalg.norm(vector_kart_to_own_goal)
 
-            if np.abs(vector_kart_to_own_goal[1]) > 80:
+            if vector_kart_to_own_goal[1] < -80:
                 self.too_close[i] = False
 
             if print_output:
@@ -304,14 +286,13 @@ class Team:
 
                 # threshold = 55 if self.too_close[i] else 30
 
-                # Update here
-                if not self.too_close[i] and np.abs(vector_kart_to_own_goal[1]) > 12:
+                if not self.too_close[i] and vector_kart_to_own_goal[1] < -20:
                     angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, kart_to_own_goal_direction)))
                     if print_output:
                         print("Never mind, get closer to goal")
                     direction_of_steering = np.sign(np.cross(kart_direction, kart_to_own_goal_direction))
                     angle_shooting_direction = -direction_of_steering * angle_shooting_direction
-                    steering_angle = angle_shooting_direction * np.pi / 180
+                    steering_angle = angle_shooting_direction / 100.
                     steering_angle = np.clip(steering_angle, -1, 1)
                     brake = True
                     acceleration = 0.
@@ -319,8 +300,8 @@ class Team:
 
                 else:
                     self.too_close[i] = True
-                    if self.forward_frames[i] < 20:
-                        steering_angle = 0.8 if i == 1 else -0.8
+                    if self.forward_frames[i] < 25:
+                        steering_angle = 0.6 if i == 1 else -0.6
                     elif self.forward_frames[i] < 50:
                         # steering_angle = 0
                         steering_angle = -0.6 if i == 1 else 0.6
@@ -328,7 +309,7 @@ class Team:
                         steering_angle = 0
                     self.forward_frames[i] += 1
                     brake = False
-                    acceleration = 0.5
+                    acceleration = 0.8
 
                 self.kart_actions[i] = {
                     'steer': steering_angle,
@@ -354,82 +335,31 @@ class Team:
                 # self.utilize_partners_puck_location[i] = False
 
                 ### Implementation of Actions -
-                angle_shooting_direction_goal = np.degrees(np.arccos(np.dot(kart_direction, kart_to_goal_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
-                direction_of_steering_goal = np.sign(np.cross(kart_direction, kart_to_goal_direction))
-                # angle_shooting_direction_goal = -direction_of_steering_goal*angle_shooting_direction_goal
 
-                if angle_shooting_direction_goal >= 120 or angle_shooting_direction_goal <= 20:
+                ## a) Shooting Direction
+                # Case 1 : Puck far away from Kart -> Shoot towards the puck directly
+                # if distance_kart_to_puck >= DistanceThreshold:
 
-                  # To prevent glitching as we approach the puck
-                  angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, kart_to_puck_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
-                  direction_of_steering = np.sign(np.cross(kart_direction, kart_to_puck_direction))
-                  angle_shooting_direction = -direction_of_steering*angle_shooting_direction
-                  steering_angle = (angle_shooting_direction)/90.
-                  steering_angle = np.clip(steering_angle, -1, 1)
+                    # To prevent glitching as we approach the puck
+                angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction,
+                                                                       kart_to_puck_direction)))  # Both vectors have a norm 1, so dot represent cos(theta)
+                direction_of_steering = np.sign(np.cross(kart_direction, kart_to_puck_direction))
+                angle_shooting_direction = -direction_of_steering * angle_shooting_direction
+                steering_angle = angle_shooting_direction / 90.
+                steering_angle = np.clip(steering_angle, -1, 1)
 
-                  if np.abs(steering_angle) >= 0.1:
-
+                if np.abs(steering_angle) >= 0.1:
                     # The shooting direction is simple the angle between kart's orientation vector and vector from kart's back to puck
-                    angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, new_kart_to_puck_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
+                    angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction,
+                                                                           new_kart_to_puck_direction)))  # Both vectors have a norm 1, so dot represent cos(theta)
                     direction_of_steering = np.sign(np.cross(kart_direction, new_kart_to_puck_direction))
-                    angle_shooting_direction = -direction_of_steering*angle_shooting_direction
+                    angle_shooting_direction = -direction_of_steering * angle_shooting_direction
 
-                    if print_output:
-                        print("Case 1")
-                        print('Steering Angle - ',angle_shooting_direction)
+                    # print("Case 1")
+                    # print('Steering Angle - ', angle_shooting_direction)
 
-                    steering_angle = (angle_shooting_direction)/90.
+                    steering_angle = angle_shooting_direction / 90.
                     steering_angle = np.clip(steering_angle, -1, 1)
-
-                else:
-                  
-                  ### Another Team's implementation ####
-                  puck_y_coordinate = normalized_puck_screen_coordinates[1]
-                  direction_of_steering_to_goal = np.sign(np.cross(kart_direction, kart_to_goal_direction))
-                  angle_of_steering_to_goal = np.arccos(np.dot(kart_direction, kart_to_goal_direction))
-                  angle_of_steering_to_goal = -direction_of_steering_to_goal*angle_of_steering_to_goal
-
-                  norm_goal_distance = ((np.clip(distance_kart_to_opponent_goal, 10, 100) - 10) / 90) + 1
-                  distance = 1 / norm_goal_distance ** 3
-                  aim_point = puck_y_coordinate + np.sign(puck_y_coordinate - angle_of_steering_to_goal) * 0.3 * distance
-                  steering_angle = np.clip(aim_point * 15, -1, 1)
-
-                  # Then, we check if the goal and puck are on different sides of kart
-                  # direction_of_steering_to_goal = np.sign(np.cross(kart_direction, kart_to_goal_direction))
-                  # direction_of_steering_to_puck = np.sign(np.cross(kart_direction, new_kart_to_puck_direction))
-
-                  # angle_of_steering_to_goal = np.arccos(np.dot(kart_direction, kart_to_goal_direction))
-                  # angle_of_steering_to_puck = np.arccos(np.dot(kart_direction, new_kart_to_puck_direction))
-
-                  # if direction_of_steering_to_goal*direction_of_steering_to_puck < 0:
-                  #   # It indicates that movings towards goal might move away from puck, so first we get closer to puck till these angles align
-                  #   angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, new_kart_to_puck_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
-                  #   direction_of_steering = np.sign(np.cross(kart_direction, new_kart_to_puck_direction))
-                  #   angle_shooting_direction = -direction_of_steering*angle_shooting_direction
-
-                  # else:
-                  #   angle_shooting_direction_puck = np.degrees(np.arccos(np.dot(kart_direction, new_kart_to_puck_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
-                  #   direction_of_steering_puck = np.sign(np.cross(kart_direction, new_kart_to_puck_direction))
-                  #   angle_shooting_direction_puck = -direction_of_steering_puck*angle_shooting_direction_puck
-
-                  #   angle_shooting_direction_goal = np.degrees(np.arccos(np.dot(kart_direction, kart_to_goal_direction))) # Both vectors have a norm 1, so dot represent cos(theta)
-                  #   direction_of_steering_goal = np.sign(np.cross(kart_direction, kart_to_goal_direction))
-                  #   angle_shooting_direction_goal = -direction_of_steering_goal*angle_shooting_direction_goal
-
-                  #   # weight = np.clip(distance_kart_to_opponent_goal, 1, 100)/100
-                  #   # angle_shooting_direction = weight*angle_shooting_direction_puck + (1-weight)*angle_shooting_direction_goal
-
-                  #   angle_shooting_direction = angle_shooting_direction_goal
-
-                  # print("New Direction (Angle) -",angle_shooting_direction)
-                  # # print("New Direction (Velocity) -",angle_shooting_direction_velocity)
-
-                  # print("Case 2")
-                  # print('Steering Angle - ',angle_shooting_direction)
-
-                  # # Steering Angle - Treat these angles as 2X more steering
-                  # steering_angle = 2*(angle_shooting_direction)/90.
-                  # steering_angle = np.clip(steering_angle, -1, 1)
 
                 ## b) Accelerate/Brake
                 # Case 1 : If Puck too close & a very high shooting angle -> slow down, first rotate
@@ -450,10 +380,9 @@ class Team:
                     # if self.follow_through_after_reverse[i] <= 0:
                     #     # We're not in follow-through so continue basic operations
                     if distance_kart_to_puck >= 10:
-                        if speed <= 14:
-                            acceleration = 0.5
-                            # acceleration = np.clip((1 - np.abs(steering_angle)) ** 2, 0.15,
-                            #                        0.8)  # accelerate basis steering angle
+                        if speed <= 12:
+                            acceleration = np.clip((1 - np.abs(steering_angle)) ** 2, 0.15,
+                                                   0.8)  # accelerate basis steering angle
                             brake = False
                             drift = False
                         else:
@@ -461,10 +390,9 @@ class Team:
                             brake = False
                             drift = False
                     else:
-                        if speed <= 10:
-                            acceleration = 0.5
-                            # acceleration = np.clip((1 - np.abs(steering_angle)) ** 2, 0.075,
-                            #                        0.8)  # accelerate basis steering angle
+                        if speed <= 8:
+                            acceleration = np.clip((1 - np.abs(steering_angle)) ** 2, 0.075,
+                                                   0.8)  # accelerate basis steering angle
                             brake = False
                             drift = True
                         else:
