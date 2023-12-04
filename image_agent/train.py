@@ -134,7 +134,7 @@ def train(args):
 
         if args.continue_training:
             print("Continuing training model from last saved checkpoint...")
-            model_unified = load_model("model_unified.pt").to(device)
+            model_unified = load_model("model_unified_new_25.pt").to(device)
         else:
             model_unified = UnifiedCoordDist().to(device)
 
@@ -186,8 +186,8 @@ def train(args):
             valid_loss /= len(valid_loader)
             if valid_logger:
                 valid_logger.add_scalar('loss', valid_loss, epoch)
-            print(f'Epoch {epoch + 1} - \tavg train loss: {total_loss_unified} \t- avg valid loss: {valid_loss}')
-            save_model(model_unified, f"model_unified_new_{epoch+1}.pt")
+            print(f'Epoch {epoch + 26} - \tavg train loss: {total_loss_unified} \t- avg valid loss: {valid_loss}')
+            save_model(model_unified, f"model_unified_new_{epoch+26}.pt")
 
     if train_logger:
         train_logger.close()

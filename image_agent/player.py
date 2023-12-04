@@ -99,11 +99,11 @@ class Team:
         }
 
         # Initialization for the sake of testing model performance
-        self.model_puck_classifier = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_puck_19.pt'),
+        self.model_puck_classifier = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_puck_new_17.pt'),
                                                 map_location="cpu").to(device)
         self.model_puck_classifier.eval()
 
-        self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_50.pt'),
+        self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_new_25.pt'),
                                              map_location="cpu").to(device)
         self.model_puck_unified.eval()
 
