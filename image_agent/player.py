@@ -78,6 +78,7 @@ class Team:
         self.kart_image = {}
 
         self.too_close = {0: False, 1: False}
+        self.return_home = {0: False, 1: False}
 
         self.forward_frames = {0: 0, 1: 0}
 
@@ -113,8 +114,12 @@ class Team:
                                                 map_location="cpu").to(device)
         self.model_puck_classifier.eval()
 
+        # self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_50.pt'),
+        #                                      map_location="cpu").to(device)
+
         self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_new_42.pt'),
                                              map_location="cpu").to(device)
+
         self.model_puck_unified.eval()
 
         self.transform = transforms.Compose(
@@ -191,7 +196,7 @@ class Team:
             if print_output:
                 print("Actions for Kart ", i)
 
-            starting_frames = 50
+            starting_frames = 45
 
             self.kart_details[i] = player_state[i]
             self.kart_image[i] = player_image[i]
@@ -244,7 +249,7 @@ class Team:
                 # print("Derived 3D Coordinates", puck_world_coordinates)
                 self.puck_last_coord[i] = puck_world_coordinates.copy()
                 self.puck_last_coord_norm[i] = normalized_puck_screen_coordinates.copy()
-            elif self.puck_seen[i].count(True) > 0:
+            elif self.puck_seen[i].count(True) > 10:
                 puck_world_coordinates = self.puck_last_coord[i]
                 normalized_puck_screen_coordinates = self.puck_last_coord_norm[i]
             else:
@@ -301,8 +306,13 @@ class Team:
             kart_to_own_goal_direction = vector_kart_to_own_goal / np.linalg.norm(vector_kart_to_own_goal)
             distance_kart_to_own_goal = np.linalg.norm(vector_kart_to_own_goal)
 
-            if np.abs(distance_kart_to_own_goal) > 80:
-                self.too_close[i] = False
+            if np.abs(vector_kart_to_own_goal[1]) > 140 and self.puck_last_coord[i][2] > 90 and self.puck_seen[i].count(True) > 10:
+                if print_output:
+                    print("Coord puck: ", self.puck_last_coord[i])
+                self.puck_last_coord[i] = np.array([0, 0, 0])
+                self.return_home[i] = True
+                for _ in range(10):
+                    self.puck_seen[i].append(False)
 
             if print_output:
                 print("Dist from own goal: ", vector_kart_to_own_goal)
@@ -310,6 +320,42 @@ class Team:
             # --------------------------------------------------------------------------------------------------------
             # Actions start here
             # --------------------------------------------------------------------------------------------------------
+            if self.return_home[i]:
+                if print_output:
+                    print("Returning Home")
+                if np.abs(vector_kart_to_own_goal[1]) < 20:
+                    self.return_home[i] = False
+                angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, kart_to_own_goal_direction)))
+                direction_of_steering = np.sign(np.cross(kart_direction, kart_to_own_goal_direction))
+
+                if abs(angle_shooting_direction) > 90:
+                    angle_shooting_direction = -np.sign(angle_shooting_direction) * (
+                                180 - abs(angle_shooting_direction))
+                    direction_of_steering = -direction_of_steering
+                    brake = True
+                    acceleration = 0.
+                else:
+                    brake = False
+                    acceleration = 0.5 if speed < 8 else 0.
+
+                angle_shooting_direction = -direction_of_steering * angle_shooting_direction
+                steering_angle = limit_period(angle_shooting_direction)
+
+                self.kart_actions[i] = {
+                    'steer': steering_angle,
+                    'acceleration': acceleration,
+                    'brake': brake,
+                    'drift': False,
+                    'fire': False,
+                    'nitro': False,
+                    'rescue': rescue
+                }
+
+                if print_output:
+                    print("Final Action - ", self.kart_actions[i])
+                    print()
+                continue
+
 
             # If puck in frame, then we proceed further, otherwise we set actions to reverse, and steer in left
             if self.puck_seen[i].count(True) == 0 and self.total_frame[i] > starting_frames:
@@ -323,25 +369,26 @@ class Team:
                 # threshold = 55 if self.too_close[i] else 30
 
                 # Update here
-                if not self.too_close[i] and np.abs(distance_kart_to_own_goal) > 4:
+                if not self.too_close[i] and np.abs(distance_kart_to_own_goal) > 10:
                     if print_output:
                         print("Never mind, get closer to goal")
                     angle_shooting_direction = np.degrees(np.arccos(np.dot(kart_direction, kart_to_own_goal_direction)))
-                    if abs(angle_shooting_direction > 90):
-                        angle_shooting_direction = 180 - angle_shooting_direction
+                    direction_of_steering = np.sign(np.cross(kart_direction, kart_to_own_goal_direction))
+
+                    if abs(angle_shooting_direction) > 90:
+                        angle_shooting_direction = -np.sign(angle_shooting_direction) * (180 - abs(angle_shooting_direction))
+                        direction_of_steering = -direction_of_steering
                         brake = True
                         acceleration = 0.
                     else:
                         brake = False
                         acceleration = 0.5 if speed < 8 else 0.
-                    direction_of_steering = np.sign(np.cross(kart_direction, kart_to_own_goal_direction))
+
                     angle_shooting_direction = -direction_of_steering * angle_shooting_direction
                     steering_angle = limit_period(angle_shooting_direction)
                     if print_output:
                         print(f"Angle Shooting dir: {angle_shooting_direction} - Steering angle: {steering_angle}")
                     # steering_angle = np.clip(steering_angle, -1, 1)
-                    brake = True
-                    acceleration = 0.
                     self.forward_frames[i] = 0
 
                 else:
