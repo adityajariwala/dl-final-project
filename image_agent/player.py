@@ -103,7 +103,7 @@ class Team:
                                                 map_location="cpu").to(device)
         self.model_puck_classifier.eval()
 
-        self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_new_25.pt'),
+        self.model_puck_unified = torch.load(path.join(path.dirname(path.abspath(__file__)), 'model_unified_new_39.pt'),
                                              map_location="cpu").to(device)
         self.model_puck_unified.eval()
 

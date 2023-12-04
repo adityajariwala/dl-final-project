@@ -47,3 +47,11 @@ Epoch 36 - 	avg train loss: 4.592606935007819 	- avg valid loss: 7.7354376316070
 Epoch 37 - 	avg train loss: 4.5055577302801195 	- avg valid loss: 7.745404992784772
 Epoch 38 - 	avg train loss: 4.503813517504725 	- avg valid loss: 7.8480227674756735
 Epoch 39 - 	avg train loss: 4.44778466635737 	- avg valid loss: 7.840674468449184
+Epoch 40 - 	avg train loss: 4.1447124563414475 	- avg valid loss: 8.05288849558149
+Epoch 41 - 	avg train loss: 4.094614931221666 	- avg valid loss: 8.254770244870867
+Epoch 42 - 	avg train loss: 3.8622240670796097 	- avg valid loss: 7.632404327392578
+Epoch 43 - 	avg train loss: 3.946096897125244 	- avg valid loss: 8.031687498092651
+Epoch 44 - 	avg train loss: 3.8993996751719506 	- avg valid loss: 7.864680358341762
+Epoch 45 - 	avg train loss: 3.6343279850894006 	- avg valid loss: 7.699758325304304
+Epoch 46 - 	avg train loss: 3.583082203207345 	- avg valid loss: 8.353549071720668
+Epoch 47 - 	avg train loss: 3.7244062999199175 	- avg valid loss: 8.499593666621617
